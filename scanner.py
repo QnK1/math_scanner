@@ -1,8 +1,6 @@
-import re
 from enum import Enum
 import sys
 import dataclasses
-from typing import Type
 
 class InvalidTokenException(Exception):
     pass
@@ -91,7 +89,6 @@ class DFA:
                     edgeFound = True
                     break
         
-        # print(f"currstate: {self.currentState}")
         return self.currentState if edgeFound else self.states[10]
 
 class Scanner:
@@ -107,12 +104,10 @@ class Scanner:
             index = i
             prevState = dfa.currentState
 
-            # print(f"i: {i}, c: {c}")
             state = dfa.move(c)
 
             if state.id == 10:
                 break
-        
         
         if state.accepts != Token.NONE:
             return input[:index + 1], index, state.accepts
@@ -122,7 +117,6 @@ class Scanner:
         else:
             return None
         
-    
 
     def scanAll(self, input: str) -> tuple[int, Token, str]:
         tokens = []
@@ -136,7 +130,6 @@ class Scanner:
                 break
             
             token = self._scanNext(input[i:])
-            # print(token)
 
             if token == None:
                 raise InvalidTokenException(f"Invalid token at {i}")
