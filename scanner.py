@@ -1,84 +1,149 @@
 import re
 from enum import Enum
 import sys
+import dataclasses
+from typing import Type
 
 class InvalidTokenException(Exception):
     pass
 
 
-class Scanner:
-    class Token(Enum):
+class Token(Enum):
         INTEGER = 1
         OPERATOR = 2
         BRACKET = 3
         IDENTIFIER = 4
-    
-    def __init__(self):
-        self.tokens = {t for t in self.Token}
+        KEYWORD = 5
+        NONE = 6
 
-        # conditions for when a character c at position i doesn't make the given token invalid
-        self.conditions = {
-            self.Token.OPERATOR : lambda i, c: (i == 0 and c in {'+', '-', '*', '/'}),
-            self.Token.BRACKET: lambda i, c: (i == 0 and c in {'(', ')'}),
-            self.Token.INTEGER: lambda i, c: (ord(c) in range(48, 58) and not (i == 0 and c == '0')),
-            self.Token.IDENTIFIER: lambda i, c: (ord(c) in range(65, 91) or ord(c) in range(97,123) or c == "_" or ord(c) in range(48, 58)
-                                                    and not (i == 0 and ord(c) in range(48, 58))),
+
+@dataclasses.dataclass(frozen=True)
+class State:
+    accepts: Token
+    id: int
+
+
+@dataclasses.dataclass(frozen=True)
+class Edge:
+    goal: State
+    chars: set[str]
+
+
+ZERO_TO_NINE = {str(i) for i in range(0, 10)}
+ONE_TO_NINE = {str(i) for i in range(1, 10)}
+OPERATORS = {'+', '-', '*', '/'}
+LOWERCASE = {chr(i) for i in range(97, 123)}
+UPPERCASE = {chr(i) for i in range(65, 91)}
+
+class DFA:
+    def __init__(self):
+        self.states = [
+            State(Token.NONE, 0),
+            State(Token.INTEGER, 1),
+            State(Token.OPERATOR, 2),
+            State(Token.IDENTIFIER, 3),
+            State(Token.NONE, 4),
+            State(Token.KEYWORD, 5),
+            State(Token.BRACKET, 6),
+            State(Token.NONE, 7),
+            State(Token.NONE, 8),
+            State(Token.KEYWORD, 9),
+            State(Token.NONE, 10),
+        ]
+        self.currentState = self.states[0]
+        self.edges = {
+            self.states[0] : [
+                Edge(self.states[1], ONE_TO_NINE),
+                Edge(self.states[2], OPERATORS),
+                Edge(self.states[3], (LOWERCASE | UPPERCASE | {'_'}) - {'i', 'f'}),
+                Edge(self.states[4], {'i'}),
+                Edge(self.states[6], {'(', ')'}),
+                Edge(self.states[7], {'f'}),
+            ],
+            self.states[1] : [
+                Edge(self.states[1], ZERO_TO_NINE),
+            ],
+            self.states[3] : [
+                Edge(self.states[3], LOWERCASE | UPPERCASE | ZERO_TO_NINE | {'_'}),
+            ],
+            self.states[4] : [
+                Edge(self.states[5], {'f'}),
+                Edge(self.states[3], (UPPERCASE | LOWERCASE | ZERO_TO_NINE | {'_'} - {'f'})),
+            ],
+            self.states[5] : [
+                Edge(self.states[3], LOWERCASE | UPPERCASE | ZERO_TO_NINE | {'_'}),
+            ],
+            self.states[7] : [
+                Edge(self.states[8], {'o'}),
+            ],
+            self.states[8] : [
+                Edge(self.states[9], {'r'}),
+            ],
         }
     
-
-    def _removeWhitespace(self, string: str) -> str:
-        output: str = re.sub(r"\s", "", string)
-        return output
-
-
-    def _scanNext(self, input: str):
-        possibleTokens = self.tokens.copy()
-        possibleTokensHistory = []
-
-        for i, c in enumerate(input):
-            for key in self.Token:
-                if not self.conditions[key](i, c):
-                    possibleTokens.discard(key)
-            
-            possibleTokensHistory.append((i, possibleTokens.copy()))
+    def move(self, char: str):
+        edgeFound = False
         
-        for historyInstance in reversed(possibleTokensHistory):
-            tset = historyInstance[1]
-            index = historyInstance[0]
-            if len(tset) == 1:
-                return index, [t for t in tset][0], input[:index + 1]
+        if self.currentState in self.edges.keys():
+            for e in self.edges[self.currentState]:
+                if char in e.chars:
+                    self.currentState = e.goal
+                    edgeFound = True
+                    break
+        
+        # print(f"currstate: {self.currentState}")
+        return self.currentState if edgeFound else self.states[10]
 
-        return None
+class Scanner:
+    def __init__(self):
+        self.tokens = {t for t in Token}
+
+
+    def _scanNext(self, input):
+        dfa = DFA()
+
+        index = 0
+        for i, c in enumerate(input):
+            index = i
+            prevState = dfa.currentState
+
+            # print(f"i: {i}, c: {c}")
+            state = dfa.move(c)
+
+            if state.id == 10:
+                break
+        
+        
+        if state.accepts != Token.NONE:
+            return input[:index + 1], index, state.accepts
+        elif prevState.accepts != Token.NONE:
+            # print(input[:index], index - 1, prevState.accepts)
+            return input[:index], index - 1, prevState.accepts
+        else:
+            return None
         
     
-    def scanAll(self, input: str):
+
+    def scanAll(self, input: str) -> tuple[int, Token, str]:
         tokens = []
-
-
+        
         i = 0
-        error = False
-        while i != len(input):
-            while input[i] in " \t\n":
+        while i < len(input):
+            while i < len(input) and input[i] in {' ', '\n', '\t'}:
                 i += 1
-                if i == len(input):
-                    return tokens
-            
-            lastScan = self._scanNext(input[i:])
 
-            if lastScan == None:
-                error = True
+            if i >= len(input):
                 break
-            else:
-                _, token, v = lastScan
-                
-                tokens.append((i, token, v))
-                # print(f"i: {i}, token: {token.name}, value: {v}")
-                i += lastScan[0] + 1
-                
-        if error:
-            # print(f"There was an error at {i}")
-            raise InvalidTokenException(f"There was an error at {i}")
+            
+            token = self._scanNext(input[i:])
+            # print(token)
 
+            if token == None:
+                raise InvalidTokenException(f"Invalid token at {i}")
+            
+            tokens.append((i, token[2], token[0]))
+            i += token[1] + 1
+        
         return tokens
 
 

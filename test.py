@@ -1,4 +1,4 @@
-from scanner import Scanner, InvalidTokenException
+from scanner import Scanner, InvalidTokenException, Token
 
 def testScannerSimpleExpression():
     sc = Scanner()
@@ -8,17 +8,17 @@ def testScannerSimpleExpression():
     res = sc.scanAll(exp)
 
     assert res == [
-        (0, Scanner.Token.BRACKET, "("),
-        (1, Scanner.Token.INTEGER, "5"),
-        (2, Scanner.Token.OPERATOR, "+"),
-        (3, Scanner.Token.INTEGER, "6"),
-        (4, Scanner.Token.BRACKET, ")"),
-        (5, Scanner.Token.OPERATOR, "/"),
-        (6, Scanner.Token.INTEGER, "7"),
-        (7, Scanner.Token.OPERATOR, "*"),
-        (8, Scanner.Token.INTEGER, "8"),
-        (9, Scanner.Token.OPERATOR, "*"),
-        (10, Scanner.Token.IDENTIFIER, "a")
+        (0, Token.BRACKET, "("),
+        (1, Token.INTEGER, "5"),
+        (2, Token.OPERATOR, "+"),
+        (3, Token.INTEGER, "6"),
+        (4, Token.BRACKET, ")"),
+        (5, Token.OPERATOR, "/"),
+        (6, Token.INTEGER, "7"),
+        (7, Token.OPERATOR, "*"),
+        (8, Token.INTEGER, "8"),
+        (9, Token.OPERATOR, "*"),
+        (10, Token.IDENTIFIER, "a")
     ]
 
 
@@ -30,9 +30,9 @@ def testScannerWithWhitespace():
     res = sc.scanAll(exp)
 
     assert res == [
-        (1, Scanner.Token.INTEGER, "5"),
-        (3, Scanner.Token.OPERATOR, "+"),
-        (5, Scanner.Token.INTEGER, "6")
+        (1, Token.INTEGER, "5"),
+        (3, Token.OPERATOR, "+"),
+        (5, Token.INTEGER, "6")
     ]
 
 
