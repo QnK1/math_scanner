@@ -18,10 +18,16 @@ class SyntaxHighlighter:
             print(text)
 
             res = self.scanner.scanAll(text)
-            text = text.replace('\n','<br>')
 
+            new = ""
+            prevEnd = -1
             for t in res:
-                text = text.replace(t[2], self.syntaxMapping[t[1]](t[2]))
+                # text = text.replace(t[2], self.syntaxMapping[t[1]](t[2]))
+                new += text[prevEnd + 1:t[0]] + self.syntaxMapping[t[1]](t[2]) 
+                prevEnd = t[0] + len(t[2]) - 1
+            
+            text = new
+            text = text.replace('\n','<br>')
             
             with open(fileOutName, 'w') as fOut:
                 fOut.write("<body style=\"background: #111;\">")
