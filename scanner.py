@@ -118,7 +118,7 @@ class Scanner:
             return None
         
 
-    def scanAll(self, input: str) -> tuple[int, Token, str]:
+    def scanAll(self, input: str) -> list[tuple[int, Token, str]]:
         tokens = []
         
         i = 0
